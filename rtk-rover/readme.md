@@ -16,8 +16,8 @@ Modul LC29H(DA) an den Pi 3 angeschlossen. Das
 Modul wird bei mir auf /dev/ttyUSB0 erkannt.
 
 Im ersten Schritt betreibe ich das Modul über meinen SAPOS Account und dazu reicht auf dem Pi
-dann der Aufruf des scriptes ohne weiteren Parameter. Sollte später die RTK-Basisstation die
-Korrekturdaten liefern, so wird das Script mit rtk_rover.py -b aufgerufen (b für Basis).
+dann der Aufruf des scriptes ohne weiteren Parameter, also **python rtk_rover.py**  . Sollte später die RTK-Basisstation die
+Korrekturdaten liefern, so wird das Script mit **python rtk_rover.py -b** aufgerufen (b für Basis).
 Damit der SAPOS Dienst genutzt werden kann sind im python script die entsprechenden Parameter
 zu setzen. Diese habe ich aus dem Informationsmaterial herausgezogen, das mir die SAPOS NRW
 zur Verfügung gestellt hat. Das kann bei Dir natürlich anders sein, und muss ggf. angepasst werden.
