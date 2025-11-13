@@ -23,8 +23,9 @@ Nehmen wir an, die Eckpunkte vom Rasen liegen bei 53.32634, 10.36597 / 53.32637,
 53.32632, 10.36618 / 53.32628, 10.36600 dann geben wir genau diese Daten in die Datei
 *GPS/rasen/rasen.json* ein. Achtung es ist eine json Datei so sollte dann so aussehen.
 
-[<br>[53.32634, 10.36597],<br>[53.32637, 10.36615],<br>[53.32632, 10.36618],<br>[53.32628, 10.36600]<br>]
-
+[
+<br>[53.32634, 10.36597],<br>[53.32637, 10.36615],<br>[53.32632, 10.36618],<br>[53.32628, 10.36600]<br>
+]
 
 Später kann durch Vermessung mit dem rtk_rover.py die einzelnen Punkte genau bestimmt werden
 und das polygon in der Karte aktualisiert werden.
@@ -32,8 +33,9 @@ Nun sollte die Karte im html Bild in etwa so aussehen.
 <p align="center">
 <img width="1000" alt="grafik" src="https://github.com/user-attachments/assets/c7bb7e14-ce5f-4a27-b631-285714d2113a" />
 </p>
+
 Die Bedienung der Seite ist intuitiv. 
-Später ist gedacht, dass die mower.py in meinem [**RopiLawnMow**](https://github.com/ullisun/RopiLawnMow) ein logfile von dem
+Später ist gedacht, dass die *mower.py* in meinem [**RopiLawnMow**](https://github.com/ullisun/RopiLawnMow) ein logfile von dem
 Mähvorgang erstellt. Dieses logFile kann dann durch den Auswahlbutton selektiert und geladen
 werden. Jeder Eintrag in in dem logFile liefert einen Datenpunkt auf der Karte. Neben den
 Geodaten habe ich geplant events zu protokollieren. Events wären dann z.B. Stops die ausgelöst
@@ -46,5 +48,7 @@ erforderlich.
 "sats": "39", "speed": "0.01", "heading": 51.54, "delta": "1.15", "event": "", "image": ""},
 Im Moment geht es derzeit erst einmal um die Grundfunktion der rtk_rover.py auf dem Mäher
 sicherzustellen. Dazu ist die Analyse.html schon ein hilfreiches Tool.
+
+**Die inbetriebnahme des rovers findest Du im Ordner Rover beschrieben** 
 
 
