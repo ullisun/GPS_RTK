@@ -49,6 +49,6 @@ erforderlich.
 Im Moment geht es derzeit erst einmal um die Grundfunktion der rtk_rover.py auf dem Mäher
 sicherzustellen. Dazu ist die Analyse.html schon ein hilfreiches Tool.
 
-**Die inbetriebnahme des rovers findest Du im Ordner Rover beschrieben** 
+**Die inbetriebnahme des rovers findest Du im Ordner [rtk_rover](https://github.com/ullisun/GPS_RTK/tree/main/rtk-rover) beschrieben** 
 
 
