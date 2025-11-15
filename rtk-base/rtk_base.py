@@ -140,28 +140,6 @@ def rx_thread(ser):
             time.sleep(0.1)
 
 
-# === Thread zum Überwachen von pos.conf ===
-def watch_conf_thread(ser):
-    """Überwacht pos.conf und aktualisiert Basisposition"""
-    while not stop_flag:
-        try:
-            if os.path.exists("pos.conf"):
-                with open("pos.conf") as f:
-                    parts = f.read().strip().split(",")
-                if len(parts) >= 3:
-                    lat = float(parts[0])
-                    lon = float(parts[1])
-                    alt = float(parts[2])
-                    X, Y, Z = calc_x_y_z(lat, lon, alt)
-                    cmd = f"$PQTMCFGSVIN,W,2,0,0.0,{X:.4f},{Y:.4f},{Z:.4f}"
-                    send_cmd(ser, cmd)
-                    log(f"[UPDATE] Neue Basispos: {lat:.7f},{lon:.7f},{alt:.2f}")
-                    os.remove("pos.conf")
-                    log("[UPDATE] pos.conf verarbeitet und gelöscht ✓")
-        except Exception as e:
-            log(f"[UPDATE ERROR] {e}")
-        time.sleep(5)
-
 # === TCP-Server für Rover ===
 def tcp_server():
     """TCP Server, der RTCM an Rover streamt"""
@@ -181,7 +159,6 @@ def main():
     ser = serial.Serial(SERIAL_PORT, BAUDRATE, timeout=1)
     init_lc29_base(ser)
     threading.Thread(target=tcp_server, daemon=True).start()
-    threading.Thread(target=watch_conf_thread, args=(ser,), daemon=True).start()
     rx_thread(ser)
 
 if __name__ == "__main__":
