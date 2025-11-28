@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Mähroboter Analyse</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!--******************************************************** --->
+<!--Diese Datei wurde durch die neue Anlayse.html ersetzt und -->
+<!--******************************************************** --->
+
+<style>
+
+  html, body { height: 100%; margin: 0; padding: 0; }
+  #map { 
+    height: 600px; 
+    width: 1024px;
+    margin-top: 3cm;
+    margin-left: auto;
+    margin-right: auto;
+    position: relative /* wichtig! Damit die Info-Box sich relativ zur Map positioniert */
+
+  } 
+  .info-panel {
+    position: absolute;
+    top: 10px;
+    left: 40px;
+    background: rgba(255,255,255,0.9);
+    padding: 10px 15px;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.4em;
+    z-index: 1000;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    opacity: 0.95;          /* leicht transparent */
+    backdrop-filter: blur(4px);  /* macht es moderner, leicht verschwommen */
+  }
+  .info-panel:hover {
+  opacity: 0.6;            /* wird transparenter */
+  transform: scale(1.03);  /* leichtes Vergrößern beim Hover */
+  }
+
+  .info-panel h4 {
+    margin: 0 0 6px 0;
+    font-size: 15px;
+    color: #333;
+  }
+
+
+
+  #controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 90%;
+  margin: 10px auto;
+}
+
+#fileInput {
+  width: 20%;
+}
+#autoPlayBtn {
+    margin-left: 8px;
+    padding: 4px 10px;
+    font-size: 1.1em;
+    cursor: pointer;
+}
+
+#replaySlider {
+  width: 60%;
+}
+
+  .leaflet-marker-icon {
+    transition: transform 0.2s ease-out;
+    transform-origin: center;
+  }
+
+
+
+</style>
+
+</head>
+<body>
+<div id="map">
+<div id="infoPanel" class="info-panel">
+  <h4>Mähdaten</h4>
+  <div id="infoContent">
+    <b>Index:</b> – <br>
+    <b>Status:</b> – <br>
+    <b>Speed:</b> – <br>
+    <b>Delta:</b> – <br>
+    <b>Heading:</b> – <br>
+    <b>Event:</b> –
+  </div>
+</div>
+
+
+</div>
+
+<div id="controls">
+  <input type="file" id="fileInput" accept=".json" />
+  <input type="range" id="replaySlider" min="0" max="0" value="0" step="1" />
+  <button id="autoPlayBtn" title="Auto Play/Pause">▶️</button>
+  <span id="infoText">–</span>
+</div>
+
+
+<script>
+// === Grundeinstellungen ===
+const imageUrl = 'pngs/karte.png';
+const imageBounds = [
+    [53.32652, 10.36567], // oben links
+    [53.32616, 10.36677]  // unten rechts
+];
+
+const map = L.map('map', {
+    crs: L.CRS.EPSG3857,
+    minZoom: 17,
+    maxZoom: 30
+});
+L.imageOverlay(imageUrl, imageBounds).addTo(map);
+map.fitBounds(imageBounds);
+
+
+// === Rasenfläche laden ===
+fetch('rasen/rasen.json?v=' + Date.now())
+  .then(r => r.json())
+  .then(coords => {
+      L.polygon(coords, {color:'green', fillOpacity:0.2}).addTo(map)
+        .bindPopup('Rasenfläche');
+  });
+
+// === Icon-Definitionen ===
+const icons = {
+  start:     L.icon({ iconUrl: 'pngs/start.png', iconSize: [28,28] }),
+  perimeter: L.icon({ iconUrl: 'pngs/perimeter.png', iconSize: [28,28] }),
+  bumper:    L.icon({ iconUrl: 'pngs/bumper.png', iconSize: [28,28] }),
+  camera:    L.icon({ iconUrl: 'pngs/camera.png', iconSize: [28,28] }),
+  gps:       L.icon({ iconUrl: 'pngs/sat.png', iconSize: [28,28] }),
+  tof:       L.icon({ iconUrl: 'pngs/tof.png', iconSize: [28,28] }),
+  ziel:      L.icon({ iconUrl: 'pngs/finish.png', iconSize: [28,28] })
+};
+
+// === Fahrspur und Events ===
+
+let mowerData = [];
+//let polyline = L.polyline([], { color: 'blue', weight: 3 }); // noch nicht addTo(map) – wird beim ersten Draw gemacht
+let currentMarker = null;
+let eventMarkers = []; // persistent gespeicherte Event-Marker
+
+
+const fileInput = document.getElementById('fileInput');
+const slider = document.getElementById('replaySlider');
+
+
+
+
+// === Logdatei laden ===
+
+
+fileInput.addEventListener('change', function (e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function (event) {
+    try {
+      let text = event.target.result;
+      if(text.trim().endsWith(",")){
+         text = text.trim().replace(/,$/, "") + "]";
+      }   
+      mowerData = JSON.parse(text);
+      //mowerData = JSON.parse(event.target.result);
+    } catch (err) {
+      alert("Fehler beim Parsen der JSON-Datei: " + err);
+      return;
+    }
+
+    // reset UI / map state
+    slider.max = Math.max(0, mowerData.length - 1);
+    document.getElementById('infoText').innerText = `0 / ${mowerData.length}`;
+    slider.value = 0;
+    
+
+    if (currentMarker) {
+      currentMarker.remove();
+      currentMarker = null;
+    }
+    eventMarkers.forEach(m => m.remove());
+    eventMarkers = [];
+
+    // optional: zentrieren auf Start, falls vorhanden
+    if (mowerData.length > 0) {
+      map.setView([mowerData[0].lat, mowerData[0].lon], map.getZoom());
+    }
+
+    // draw first frame (index 0)
+    updateReplayMarker(0);
+  };
+  reader.readAsText(file);
+});
+
+slider.addEventListener('input', function () {
+  const idx = parseInt(slider.value, 10);
+  updateReplayMarker(idx);
+});
+
+let lastIndex = 0;   // merkt sich den zuletzt gezeichneten Index
+
+function updateReplayMarker(index) {
+  if (!Array.isArray(mowerData) || mowerData.length === 0) return;
+  index = Math.max(0, Math.min(index, mowerData.length - 1));
+
+  const point = mowerData[index];
+  const infoEl = document.getElementById('infoText');
+
+  // --- Wenn Slider zurückgeschoben wurde: Punkte löschen ---
+  if (index < lastIndex) {
+    for (let i = eventMarkers.length - 1; i >= 0; i--) {
+      const m = eventMarkers[i];
+      if (i > index) {
+        map.removeLayer(m);
+        eventMarkers.splice(i, 1);
+      }
+    }
+    // Marker-Cache verkleinern
+    lastIndex = index;
+  }
+
+  // --- Nur neue Punkte hinzufügen ---
+  for (let i = lastIndex + 1; i <= index; i++) {
+    const p = mowerData[i];
+    if (!p) continue;
+
+    // kleinen Punkt zeichnen
+    const color = (p.fix === "RTK-Fixed") ? "green" :
+                  (p.fix === "RTK-Float") ? "orange" : "red";
+
+    const marker = L.circleMarker([p.lat, p.lon], {
+      radius: 3,
+      title:"Hallo",
+      color: color,
+      fillOpacity: 0.8
+    }).addTo(map);
+    eventMarkers.push(marker);
+
+    // Event-Icons nur bei echtem Event
+    if (p.event && p.event.trim() !== "" && icons[p.event]) {
+      const evtMarker = L.marker([p.lat, p.lon], { 
+        title:"",
+        icon: icons[p.event] });
+        evtMarker.bindTooltip("", { permanent: false });
+      //evtMarker.bindPopup(_popupHtmlForPoint(p, i));
+      evtMarker.addTo(map);
+      eventMarkers.push(evtMarker);
+    }
+  }
+
+  // --- Hauptmarker aktualisieren ---
+  if (currentMarker) {
+    currentMarker.setLatLng([point.lat, point.lon]);
+  } else {
+    currentMarker = L.marker([point.lat, point.lon], {
+      title:"",
+      icon: L.icon({ iconUrl: 'pngs/default.png', iconSize: [0, 0] })
+    }).addTo(map);
+  }
+  document.getElementById('infoText').innerText = `${index}/${mowerData.length}`;
+
+  const infoPanel = document.getElementById('infoContent');
+  if (infoPanel) {
+    infoPanel.innerHTML = `
+      <b>Index:</b> ${index}/${mowerData.length} <br>
+      <b>Status:</b> ${point.status || "–"} <br>
+      <b>Speed:</b> ${(Number(point.speed) || 0).toFixed(2)} m/s <br>
+      <b>Delta:</b> ${point.delta || '-'} m<br>
+      <b>Heading:</b> ${(Number(point.heading) || 0).toFixed(2)}° <br>
+      <b>Event:</b> ${point.event || "–"}
+    `;
+  }
+
+  // Letzten Index speichern
+  lastIndex = index;
+}
+// ---- AutoPlay Setup ----
+let autoPlayTimer = null;
+const playBtn = document.getElementById('autoPlayBtn');
+//const slider = document.getElementById('replaySlider');
+
+playBtn.addEventListener('click', () => {
+  if (autoPlayTimer) {
+    // ► läuft bereits → Pause
+    clearInterval(autoPlayTimer);
+    autoPlayTimer = null;
+    playBtn.textContent = '▶️';
+  } else {
+    // ⏸ pausiert → starten
+    playBtn.textContent = '⏸️';
+    autoPlayTimer = setInterval(() => {
+      if (!slider || !mowerData) return;
+      let nextVal = Number(slider.value) + 1;
+      if (nextVal >= mowerData.length) {
+        clearInterval(autoPlayTimer);
+        autoPlayTimer = null;
+        playBtn.textContent = '▶️';
+      } else {
+        slider.value = nextVal;
+        updateReplayMarker(nextVal);
+      }
+    }, 200); // Schrittweite: 500 ms
+  }
+});
+
+
+</script>
+</body>
+</html>
