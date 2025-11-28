@@ -70,5 +70,12 @@ Wie schon weiter oben beschrieben, wird dieses Logfile später durch weitere Inf
 und auf der Map in der Html Seite dann angezeigt. Dieses ist für eine nachträgliche Analyse des
 Mähvorganges nützlich.
 
+**Am 28.11.2025 ist in die rtk-rover.py ein Live tracking integriert worden.**
+
+Dazu muss die Datei websocket_server.py zuvor gestartet werden.
+Danach die rtk-rover.py starten. Du kannst natürlich auch die websocket_server.py als Systemd.service zu beginn starten.
+Der websocket_server stellt für die Analyse.html nun Echtzeit-Daten zur Verfügung. Du kannst also während der Fahrt auf der Webseite sehen
+wo der Mäher entlang fährt.
+
 **Alle Informationen zu der Basisstation findest Du in dem [rtk-base](https://github.com/ullisun/GPS_RTK/tree/main/rtk-base) Ordner**
 
